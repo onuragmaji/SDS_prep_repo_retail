@@ -63,6 +63,20 @@ is just "how many of these Bernoulli trials came up yes?"
 """
     )
 
+with st.expander(":material/school: Interview prep: Bernoulli"):
+    st.markdown(
+        """
+**In one line:** one trial, two outcomes (success/failure) with success probability p; mean = p, variance = p(1-p).
+
+**You might get asked:**
+- What's the difference between Bernoulli and Binomial?
+- What are the mean and variance of a Bernoulli random variable?
+- Where does a Bernoulli trial show up in a retail funnel?
+
+**How to answer:** call Bernoulli the atomic yes/no outcome — Binomial is just "the sum of n independent Bernoullis." Tie it to logistic regression, which models the p of a single Bernoulli outcome.
+"""
+    )
+
 with st.expander(":material/quiz: Hands-on: is this a Bernoulli trial?"):
     st.markdown("For each retail scenario, decide if a single instance is a Bernoulli trial.")
     q1 = st.radio(
@@ -72,7 +86,10 @@ with st.expander(":material/quiz: Hands-on: is this a Bernoulli trial?"):
         key="bern_q1",
     )
     if q1:
-        st.success("Correct — exactly two outcomes, checkout or abandon.") if q1 == "Yes, Bernoulli" else st.error("Actually yes — two outcomes only, so it is Bernoulli.")
+        if q1 == "Yes, Bernoulli":
+            st.success("Correct — exactly two outcomes, checkout or abandon.")
+        else:
+            st.error("Actually yes — two outcomes only, so it is Bernoulli.")
 
     q2 = st.radio(
         "The number of items a customer adds to their cart during one visit.",
@@ -81,7 +98,10 @@ with st.expander(":material/quiz: Hands-on: is this a Bernoulli trial?"):
         key="bern_q2",
     )
     if q2:
-        st.success("Correct — a count, not a yes/no outcome, so it is not Bernoulli.") if q2 == "No" else st.error("Not quite — a count of items has more than two outcomes, so it is not Bernoulli.")
+        if q2 == "No":
+            st.success("Correct — a count, not a yes/no outcome, so it is not Bernoulli.")
+        else:
+            st.error("Not quite — a count of items has more than two outcomes, so it is not Bernoulli.")
 
 st.markdown("---")
 
@@ -135,6 +155,20 @@ targeting at checkout.
 **Interview tip:** If someone asks for P(A|B), immediately ask "what is the denominator population?"
 Most conditional-probability mistakes come from using the wrong denominator (e.g. conditioning on the
 full population instead of just B).
+"""
+    )
+
+with st.expander(":material/school: Interview prep: Conditional probability"):
+    st.markdown(
+        """
+**In one line:** P(A|B) = P(A and B) / P(B) — the probability of A once you restrict the world to cases where B is true.
+
+**You might get asked:**
+- How is conditional probability different from joint probability P(A and B)?
+- Walk me through computing P(A|B) from a contingency table.
+- When does conditioning change nothing?
+
+**How to answer:** name the denominator population out loud first, then compute. "Conditioning changes nothing" is exactly the definition of independence — a natural bridge to that topic next.
 """
     )
 
@@ -193,6 +227,20 @@ story above — it demonstrates business judgment, not just formula recall.
 """
     )
 
+with st.expander(":material/school: Interview prep: Bayes' theorem"):
+    st.markdown(
+        """
+**In one line:** P(A|B) = P(B|A)·P(A) / P(B) — turns a prior belief into a posterior belief given new evidence.
+
+**You might get asked:**
+- A test is 99% accurate and the condition affects 1 in 10,000 people — if you test positive, what's the real probability you have it?
+- Why can a 90%-accurate fraud model still flag mostly innocent transactions?
+- What's the difference between P(A|B) and P(B|A)? (the "prosecutor's fallacy")
+
+**How to answer:** always ask for the base rate first, then walk through numerator/denominator explicitly out loud — interviewers are grading whether you catch the base-rate trap, not whether you memorized the formula.
+"""
+    )
+
 # --- 2.3 Independence ---
 st.markdown("#### 2.3 Independence")
 st.markdown(
@@ -221,6 +269,20 @@ hiding it.
 """
     )
 
+with st.expander(":material/school: Interview prep: Independence"):
+    st.markdown(
+        """
+**In one line:** A and B are independent when P(A|B) = P(A), equivalently P(A and B) = P(A)·P(B).
+
+**You might get asked:**
+- How would you test if two features/events are independent from data?
+- Why does naive Bayes assume feature independence, and when does that break down?
+- Can two variables have zero correlation but still not be independent?
+
+**How to answer:** yes to the last one — correlation only catches *linear* relationships, so zero correlation does not imply independence. Always state which independence assumptions your model relies on.
+"""
+    )
+
 with st.expander(":material/quiz: Hands-on: independent or not?"):
     q3 = st.radio(
         "A customer's chance of buying a phone charger, and whether they just bought a phone.",
@@ -229,7 +291,10 @@ with st.expander(":material/quiz: Hands-on: independent or not?"):
         key="indep_q1",
     )
     if q3:
-        st.success("Correct — buying a phone strongly raises the chance of buying a charger.") if q3 == "Not independent" else st.error("Not quite — a phone purchase makes a charger purchase much more likely.")
+        if q3 == "Not independent":
+            st.success("Correct — buying a phone strongly raises the chance of buying a charger.")
+        else:
+            st.error("Not quite — a phone purchase makes a charger purchase much more likely.")
 
 # --- 2.4 Expected value ---
 st.markdown("#### 2.4 Expected value")
@@ -268,6 +333,20 @@ customers — even though any single customer gets exactly **one** of the three 
 
 **Interview tip:** Expected value is the foundation of every "expected revenue," "expected demand,"
 or "expected lift" calculation you'll be asked to reason about in pricing and forecasting interviews.
+"""
+    )
+
+with st.expander(":material/school: Interview prep: Expected value"):
+    st.markdown(
+        """
+**In one line:** E[X] = Σ x·P(X=x) — the long-run average outcome, not what happens on any single occasion.
+
+**You might get asked:**
+- How would you compute the expected cost or revenue of a promotion?
+- What's the difference between expected value and the median?
+- When is expected value a misleading summary?
+
+**How to answer:** expected value can mislead under high variance or skew (e.g. a rare but catastrophic stock-out cost) — pair it with variance or a percentile whenever the distribution is lopsided.
 """
     )
 
@@ -310,6 +389,20 @@ average, but you need much higher safety stock to avoid stock-outs.
 
 **Interview tip:** Senior candidates should immediately connect variance to *business consequences*
 (safety stock, confidence interval width, risk) rather than just stating the formula.
+"""
+    )
+
+with st.expander(":material/school: Interview prep: Variance"):
+    st.markdown(
+        """
+**In one line:** Var(X) = E[(X − E[X])²] — the average squared spread of outcomes around the mean.
+
+**You might get asked:**
+- Two SKUs have the same average demand but you'd stock them very differently — why?
+- How does variance relate to confidence-interval width or safety stock?
+- What's the difference between variance and standard deviation?
+
+**How to answer:** standard deviation (√variance) is in the original units and easier to communicate to stakeholders ("±40 units") than variance ("1600 units²") — lead with SD in business conversations, keep variance for the math.
 """
     )
 
@@ -365,6 +458,20 @@ caveat is central to price-elasticity estimation.
 """
     )
 
+with st.expander(":material/school: Interview prep: Covariance & correlation"):
+    st.markdown(
+        """
+**In one line:** covariance gives the direction two variables move together; correlation rescales it to [-1, 1] so strength is comparable across units.
+
+**You might get asked:**
+- Why report correlation instead of covariance?
+- Give an example where correlation is high but there's no causal link.
+- What does a correlation of 0 tell you, and what does it NOT tell you?
+
+**How to answer:** correlation of 0 only rules out a *linear* relationship — a strong nonlinear one can still exist. Always have the ice-cream/drowning or price-cut confounder story ready for the causation question.
+"""
+    )
+
 # --- 2.7 Law of Large Numbers ---
 st.markdown("#### 2.7 Law of Large Numbers (LLN)")
 st.markdown(
@@ -403,6 +510,20 @@ single new store with 50 transactions/day has a much noisier, less trustworthy a
 
 **Interview tip:** LLN explains *why averages become reliable with scale*; it does **not** tell you
 anything about the *shape* of the sampling distribution — that's what CLT is for.
+"""
+    )
+
+with st.expander(":material/school: Interview prep: Law of Large Numbers"):
+    st.markdown(
+        """
+**In one line:** as sample size grows, the sample average converges to the true population mean.
+
+**You might get asked:**
+- Why can a large retailer forecast more confidently than a brand-new store with little data?
+- Does LLN tell you anything about the *shape* of the sampling distribution?
+- What's the difference between LLN and CLT?
+
+**How to answer:** keep them cleanly separated — LLN says the average *converges*; CLT says the average, once you look at repeated samples, is approximately *Normally shaped*. LLN is about accuracy, CLT is about the distribution's form.
 """
     )
 
@@ -455,6 +576,20 @@ Normal?"
 """
     )
 
+with st.expander(":material/school: Interview prep: Central Limit Theorem"):
+    st.markdown(
+        """
+**In one line:** the sampling distribution of the mean approaches Normal as n grows, regardless of the shape of the underlying population.
+
+**You might get asked:**
+- Why can you run a t-test/z-test on skewed revenue data?
+- What sample size counts as "large enough" for CLT?
+- What does CLT NOT guarantee?
+
+**How to answer:** the common rule of thumb is n ≥ 30, but more skew needs a bigger n. CLT does not fix a biased sample and does not make the *raw* data Normal — only the distribution of the *sample mean*.
+"""
+    )
+
 st.markdown("---")
 
 # Bernoulli / Binomial
@@ -495,6 +630,20 @@ The binomial distribution answers questions like:
 
 With the current sliders: P(exactly {k} purchases) = **{prob_k:.4f}**, and P(at most {k} purchases) = **{prob_at_least_k:.4f}**.
 Retailers use this to set staffing levels, inventory holds, and even call-center coverage for order confirmations.
+"""
+    )
+
+with st.expander(":material/school: Interview prep: Binomial"):
+    st.markdown(
+        """
+**In one line:** count of successes across n independent, identical Bernoulli trials; mean = np, variance = np(1-p).
+
+**You might get asked:**
+- When would you use Binomial vs. Poisson?
+- How and when can you approximate a Binomial with a Normal distribution?
+- How does Binomial connect to A/B test sample-size math?
+
+**How to answer:** the Normal approximation is valid when np and n(1-p) are both reasonably large (rule of thumb: ≥ 5-10) — that's exactly why conversion-count math in A/B testing can lean on Normal-based formulas.
 """
     )
 
@@ -565,6 +714,20 @@ Practical uses:
 """
     )
 
+with st.expander(":material/school: Interview prep: Poisson"):
+    st.markdown(
+        """
+**In one line:** count of independent events in a fixed interval at a constant average rate λ; mean = variance = λ.
+
+**You might get asked:**
+- Why is mean = variance a Poisson signature, and what does it mean if real data violates it?
+- When would you use Poisson instead of a standard forecasting model for demand?
+- Is Poisson "memoryless"?
+
+**How to answer:** if observed variance is much bigger than the mean, that's "overdispersion" — a sign Poisson is the wrong model. Poisson is the natural fit for intermittent/low-volume demand (Croston's method territory); the *gaps between* Poisson events are memoryless (that's Exponential, next).
+"""
+    )
+
 with st.expander(":material/quiz: Hands-on: will we run out of stock?"):
     st.markdown(
         f"""
@@ -631,6 +794,20 @@ Retail uses:
 **Interpretation reminder:** ~68% of values fall within ±1σ of the mean, ~95% within ±2σ, ~99.7%
 within ±3σ (the "68-95-99.7 rule") — a fast mental check when someone quotes a mean and standard
 deviation.
+"""
+    )
+
+with st.expander(":material/school: Interview prep: Normal distribution"):
+    st.markdown(
+        """
+**In one line:** continuous, symmetric bell curve defined by mean μ and variance σ²; commonly arises because a quantity sums many small independent effects (CLT).
+
+**You might get asked:**
+- Why do we typically assume regression residuals are approximately Normal?
+- What does the 68-95-99.7 rule let you eyeball quickly?
+- When is the Normal assumption dangerous?
+
+**How to answer:** flag heavy tails and skew (real revenue, fraud, extreme outliers) as common failure modes — the Normal assumption underestimates the chance of extreme events when the true distribution has fatter tails.
 """
     )
 
@@ -708,6 +885,20 @@ practice.
 """
     )
 
+with st.expander(":material/school: Interview prep: Exponential"):
+    st.markdown(
+        """
+**In one line:** models the time between events in a Poisson process; "memoryless"; mean = 1/λ.
+
+**You might get asked:**
+- What does "memoryless" mean, and how would you test if it's realistic here?
+- How does Exponential relate to Poisson?
+- Why might real "time until next purchase" data violate the memoryless assumption?
+
+**How to answer:** use the 30-day-inactive-customer thought experiment — under a pure Exponential model they're no more or less "due" to buy than a brand-new customer, which usually doesn't match real behavior (habit, segments, seasonality), hence richer survival models in practice.
+"""
+    )
+
 # Uniform
 st.subheader("7. Uniform distribution: every outcome equally likely")
 st.markdown(
@@ -749,6 +940,20 @@ fixed range, with no discount level favored over another.
 
 **Interview tip:** Uniform is the backbone of random sampling, random assignment in experiments, and
 Monte Carlo simulation — even when the business quantity itself isn't uniformly distributed.
+"""
+    )
+
+with st.expander(":material/school: Interview prep: Uniform"):
+    st.markdown(
+        """
+**In one line:** every outcome in a range [a, b] is equally likely; mean = (a+b)/2.
+
+**You might get asked:**
+- Where does Uniform show up in an A/B test?
+- How would you generate a randomly-sized discount between two values?
+- Why is Uniform rarely the right model for a real business metric like demand or price?
+
+**How to answer:** frame Uniform as "the mechanism" (randomization, simulation, random assignment), not "the business metric" — few real retail quantities are naturally equally likely across a range.
 """
     )
 

@@ -87,6 +87,20 @@ reason a bigger sample gives a more trustworthy estimate.
 """
     )
 
+with st.expander(":material/school: Interview prep: Random sampling & CLT"):
+    st.markdown(
+        """
+**In one line:** a random sample lets you generalize to the full population; standard error (how noisy the sample average is) shrinks as 1/√n.
+
+**You might get asked:**
+- Why not just analyze the full dataset if you technically have access to it?
+- If you 10x the sample size, how much does the standard error shrink?
+- What's the difference between the population standard deviation and the standard error?
+
+**How to answer:** 10x the sample only shrinks SE by √10 ≈ 3.16x, not 10x — this diminishing-returns fact is exactly why even huge A/B tests still need real calendar time to reach significance.
+"""
+    )
+
 with st.expander(":material/quiz: Hands-on: how much does sample size help?"):
     st.markdown("The standard error shrinks as sample size grows, but not linearly — it shrinks with the square root of n.")
     compare_n = st.number_input(
@@ -174,6 +188,20 @@ surveying everyone.
 """
     )
 
+with st.expander(":material/school: Interview prep: Stratified sampling"):
+    st.markdown(
+        """
+**In one line:** fixes each subgroup's share of the sample in advance, instead of letting it vary randomly — same expected estimate, lower variance.
+
+**You might get asked:**
+- When would stratified sampling NOT help much?
+- How do you decide what the strata should be?
+- Is stratified sampling biased compared to simple random sampling?
+
+**How to answer:** stress "unbiased, lower variance" — it doesn't help when the subgroups don't actually differ on the outcome you're measuring, and the strata should be known, meaningful subgroups (region, format, tier), not arbitrary splits.
+"""
+    )
+
 st.markdown("#### 1.3 Sampling bias, selection bias & representativeness")
 st.markdown(
     """
@@ -228,6 +256,20 @@ many respond.
 answer starts with "who leaves ratings, and are they representative of everyone?" This is the
 practical difference between **sampling bias** (a flawed selection mechanism) and simply having a
 **small sample** (which random sampling alone would fix).
+"""
+    )
+
+with st.expander(":material/school: Interview prep: Sampling bias & selection bias"):
+    st.markdown(
+        """
+**In one line:** a systematic mismatch between who/what gets sampled and the population you want to generalize to — more data does not fix it.
+
+**You might get asked:**
+- "Our app has a 4.8-star rating — are customers happy?"
+- How is selection bias different from just having a small sample?
+- How would you correct for a known selection bias?
+
+**How to answer:** lead with "who is missing from this sample, and why" before trusting any stat from opt-in data. Corrections include reweighting by known demographics, stratified/random outreach, or explicitly modeling the selection mechanism.
 """
     )
 
@@ -286,6 +328,20 @@ This is far more honest and useful than "delivery takes {obs_mean:.1f} hours" �
 team how much wiggle room to build into customer-facing promises (e.g. "arrives in 2-3 days").
 A wider interval means less certainty; collecting more deliveries (bigger n) narrows it, same as
 in the sampling section above.
+"""
+    )
+
+with st.expander(":material/school: Interview prep: Confidence intervals"):
+    st.markdown(
+        """
+**In one line:** a range built from sample data that would contain the true parameter in a stated % of repeated samples — a method's long-run reliability, not a probability on this one interval.
+
+**You might get asked:**
+- What's the correct interpretation of a 95% confidence interval?
+- How does sample size affect interval width?
+- What's the difference between a confidence interval and a prediction interval?
+
+**How to answer:** never say "95% chance the true mean is in this interval" — the true mean is fixed; it's the method that has 95% long-run coverage. A prediction interval is wider, since it also covers individual-observation noise, not just uncertainty in the mean.
 """
     )
 
@@ -369,6 +425,20 @@ t-test, which is what you'd actually use when σ must be estimated from the samp
 """
     )
 
+with st.expander(":material/school: Interview prep: Hypothesis testing"):
+    st.markdown(
+        """
+**In one line:** a framework for deciding if an observed effect is unlikely enough under a null hypothesis (H0) to call it "real" rather than noise.
+
+**You might get asked:**
+- Walk me through the steps of a hypothesis test.
+- What does a p-value actually mean?
+- Give an example where a result is statistically significant but not practically significant.
+
+**How to answer:** a p-value is P(data this extreme or more | H0 is true) — it is NOT "the probability H0 is true," a very common trap. Always follow a significant result with effect size and business cost before recommending action.
+"""
+    )
+
 with st.expander(":material/quiz: Hands-on: would you ship this change?"):
     st.markdown(
         f"""
@@ -434,6 +504,20 @@ Retailers tune these trade-offs deliberately:
 - Lowering α (stricter significance) reduces false alarms but makes it *harder* to detect real wins — more Type II risk
 - A bigger test sample increases power, catching smaller real effects, but costs more time and traffic
 - A low-cost, reversible change (e.g. a button color) can tolerate more Type I risk than a risky, expensive one (e.g. a full site re-platform)
+"""
+    )
+
+with st.expander(":material/school: Interview prep: Type I/II error & power"):
+    st.markdown(
+        """
+**In one line:** Type I = false alarm (reject a true H0); Type II = miss a real effect; power = 1 − P(Type II).
+
+**You might get asked:**
+- How does lowering α affect Type II error and power?
+- How would you choose the right α for a specific business decision?
+- How does sample size relate to power?
+
+**How to answer:** frame the α/power trade-off around the *cost of each error type to this specific decision* — not "0.05 by convention." A cheap, reversible change can tolerate a looser α; an expensive, hard-to-reverse one should not.
 """
     )
 
@@ -515,6 +599,20 @@ With large samples (roughly n > 30 per group), the t-test and z-test give nearly
 """
     )
 
+with st.expander(":material/school: Interview prep: t-test"):
+    st.markdown(
+        """
+**In one line:** compares two group means using the t-distribution (fatter tails than Normal) when the population standard deviation is unknown and estimated from the sample.
+
+**You might get asked:**
+- When would you use a t-test instead of a z-test?
+- What's the difference between a paired and an independent (unpaired) t-test?
+- What assumptions does a t-test make, and what if they're violated?
+
+**How to answer:** default to Welch's t-test (doesn't assume equal variances) as the safer choice; use a paired test when the same units are measured twice (before/after), independent when comparing two separate groups.
+"""
+    )
+
 st.markdown("#### 5.2 Two-proportion z-test — comparing conversion rates")
 st.markdown(
     """
@@ -554,6 +652,20 @@ level.
 **Interview tip:** always pair this with a **practical significance** check and a **guardrail metric**
 check (e.g. did revenue per visitor also improve, not just the conversion count?) — this is exactly
 the caveat covered in the Experimentation / A-B Testing section of the prep guide.
+"""
+    )
+
+with st.expander(":material/school: Interview prep: Two-proportion z-test"):
+    st.markdown(
+        """
+**In one line:** compares two conversion rates using a z-test built on the pooled proportion under H0.
+
+**You might get asked:**
+- Why do you pool the two proportions when computing the standard error?
+- What's the difference between statistical and practical significance in an A/B test?
+- What is sample-ratio mismatch, and why does it matter here?
+
+**How to answer:** pooling assumes H0 (no true difference) is correct, so it uses one shared estimate of p for the null standard error. Immediately pivot any "significant" result to "is the lift big enough to matter," and check the actual traffic split matches the intended allocation (sample-ratio mismatch signals a broken experiment, not a real effect).
 """
     )
 
@@ -631,6 +743,20 @@ the relationship — for that, follow up by comparing the actual conversion rate
 """
         )
 
+    with st.expander(":material/school: Interview prep: Chi-square test"):
+        st.markdown(
+            """
+**In one line:** tests whether two categorical variables are associated, by comparing observed vs. expected cell counts.
+
+**You might get asked:**
+- What does a significant chi-square result tell you, and what does it NOT tell you?
+- What's the difference between a test of independence and a goodness-of-fit test?
+- What happens when expected cell counts are small?
+
+**How to answer:** significance means "related," not "how" or "in which direction" — always follow up with the actual rates. With small expected counts (rule of thumb: below ~5), the chi-square approximation gets unreliable — mention Fisher's exact test as the fallback.
+"""
+        )
+
 st.markdown("#### 5.4 ANOVA — comparing means across 3+ groups")
 st.markdown(
     """
@@ -681,6 +807,20 @@ At p = {f_pvalue:.4f}, the team would conclude the three regions
 **Interview tip:** a significant ANOVA only tells you *some* pair of groups differs — it doesn't say
 *which* pair. The natural follow-up is a post-hoc test (e.g. Tukey's HSD) or pairwise t-tests **with
 a multiple-testing correction** applied, which is exactly the next topic.
+"""
+    )
+
+with st.expander(":material/school: Interview prep: ANOVA"):
+    st.markdown(
+        """
+**In one line:** tests whether 3+ group means differ, by comparing between-group variance to within-group variance.
+
+**You might get asked:**
+- Why not just run pairwise t-tests across all groups instead of ANOVA?
+- A significant ANOVA result — what's your next step?
+- What assumptions does ANOVA make?
+
+**How to answer:** pairwise t-tests inflate the false-positive rate (multiple testing); ANOVA answers "is there any difference," a post-hoc test (e.g. Tukey's HSD) then answers "which groups" — name both steps. Assumptions: independence, roughly equal variances, roughly Normal residuals.
 """
     )
 
@@ -751,6 +891,20 @@ asymmetric around the mean, while the classical interval is always perfectly sym
 **Interview tip:** bootstrap is a *simulation-based* substitute for a formula — mention it whenever
 you're asked for a confidence interval on a statistic without a clean textbook standard-error formula
 (a median, a ratio, a Gini coefficient, a top-decile share of revenue).
+"""
+    )
+
+with st.expander(":material/school: Interview prep: Bootstrap"):
+    st.markdown(
+        """
+**In one line:** builds a confidence interval by resampling the observed data with replacement, instead of relying on a distributional formula.
+
+**You might get asked:**
+- Why does resampling WITH replacement matter here?
+- When would you prefer bootstrap over a classical formula-based CI?
+- What's a limitation of the bootstrap?
+
+**How to answer:** with replacement is what lets each resample vary (without it you'd just reproduce the same sample every time). Bootstrap can't fix a small, biased, or unrepresentative original sample — it's a compute-based substitute for a formula, not a substitute for good data.
 """
     )
 
@@ -849,6 +1003,20 @@ share of false alarms among many flagged items).
 **Interview tip:** this is also why "peeking" at an A/B test's results every day and stopping as soon
 as it looks significant is dangerous — checking the same test repeatedly is itself a form of multiple
 testing (each peek is another "test"), inflating the false-positive rate far above the nominal α.
+"""
+    )
+
+with st.expander(":material/school: Interview prep: Multiple testing"):
+    st.markdown(
+        """
+**In one line:** running many hypothesis tests inflates the overall false-positive rate above the nominal α of any single test.
+
+**You might get asked:**
+- You checked 50 metrics and 3 are "significant" at p<0.05 — how many would you expect by chance alone?
+- What's the difference between Bonferroni and FDR (Benjamini-Hochberg) correction?
+- Why is "peeking" at an A/B test daily a multiple-testing problem?
+
+**How to answer:** expected false positives ≈ m×α (here, 50×0.05 = 2.5), so 3 "hits" could easily be pure noise. Bonferroni controls the chance of ANY false positive (conservative); FDR controls the expected *share* of false positives among flagged results (less conservative, standard for screening many metrics/SKUs).
 """
     )
 
