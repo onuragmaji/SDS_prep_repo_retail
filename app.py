@@ -40,6 +40,7 @@ Use the left sidebar to move between pages:
 - Probability & Distributions
 - Statistical Inference
 - Forecasting
+- Machine Learning & Model Evaluation
 """
 )
 
