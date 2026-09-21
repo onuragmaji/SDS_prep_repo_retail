@@ -58,6 +58,8 @@ st.markdown(
 
 st.code(
     '''
+from collections import defaultdict, Counter, deque
+
 # List: ordered and mutable
 nums = [3, 1, 4, 1, 5]
 nums.append(2)
@@ -70,6 +72,34 @@ for x in nums:
     freq[x] = freq.get(x, 0) + 1
 print(freq)  # {1: 2, 2: 1, 3: 1, 4: 1, 5: 1}
 
+# defaultdict(int): counting
+counts = defaultdict(int)
+for x in nums:
+    counts[x] += 1
+print(counts)  # defaultdict(<class 'int'>, {1: 2, 2: 1, 3: 1, 4: 1, 5: 1})
+
+# defaultdict(list): grouping
+by_parity = defaultdict(list)
+for x in nums:
+    by_parity[x % 2].append(x)
+print(by_parity)  # {1: [1, 3, 5], 0: [2, 4]}
+
+# defaultdict(set): unique grouping
+unique_by_mod = defaultdict(set)
+for x in nums:
+    unique_by_mod[x % 2].add(x)
+print(unique_by_mod)  # {1: {1, 3, 5}, 0: {2, 4}}
+
+# Counter(): frequency counting
+counter = Counter(nums)
+print(counter)  # Counter({1: 2, 2: 1, 3: 1, 4: 1, 5: 1})
+
+# deque(): BFS / queue
+queue = deque([1, 2, 3])
+queue.append(4)
+queue.popleft()
+print(queue)  # deque([2, 3, 4])
+
 # Set: unique values and fast membership
 seen = set()
 for x in nums:
@@ -77,6 +107,26 @@ for x in nums:
 print(seen)      # {1, 2, 3, 4, 5}
 print(5 in seen) # True
 ''',
+    language="python",
+)
+
+st.markdown("---")
+
+st.subheader("Group Anagrams example")
+st.code(
+    '''
+from collections import defaultdict
+
+class Solution:
+    def groupAnagrams(self, strs: list[str]) -> list[list[str]]:
+        anagram_dict = defaultdict(list)
+
+        for word in strs:
+            key = ''.join(sorted(word))
+            anagram_dict[key].append(word)
+
+        return list(anagram_dict.values())
+    ''',
     language="python",
 )
 
