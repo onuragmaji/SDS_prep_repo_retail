@@ -112,6 +112,24 @@ print(5 in seen) # True
 
 st.markdown("---")
 
+st.subheader("Competitive programming: Counter")
+st.code(
+    '''
+from collections import Counter
+
+items = ["apple", "banana", "apple", "orange", "banana", "apple"]
+count = Counter(items)
+print(count)  # Counter({'apple': 3, 'banana': 2, 'orange': 1})
+print(count.most_common(2))  # [('apple', 3), ('banana', 2)]
+print(sorted(count.items(), key=lambda kv: kv[1], reverse=True))
+print(count["apple"])  # 3
+print(count.get("grape", 0))  # 0
+''',
+    language="python",
+)
+
+st.markdown("---")
+
 st.subheader("Group Anagrams example")
 st.code(
     '''

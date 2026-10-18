@@ -9,5 +9,5 @@ python3 -m pip install -r requirements.txt
 
 streamlit run app.py \
   --server.headless true \
-  --server.port 8501 \
+  --server.port 8502 \
   --browser.gatherUsageStats false
