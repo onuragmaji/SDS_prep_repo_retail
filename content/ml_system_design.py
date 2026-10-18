@@ -151,6 +151,46 @@ TIME_BUDGET = [
     {"phase": "Rollout, trade-offs, questions (step 9)", "minutes": 9},
 ]
 
+FRAMEWORK_TOOLS = {
+    1: ["No tool yet: decide the decision and the success measure before choosing tools."],
+    2: ["No tool yet: metrics come from the business problem, not from the stack."],
+    3: [
+        "Great Expectations / pandera: schema, null and range checks on source data.",
+        "DVC or Delta Lake time travel: pin the data version a model was trained on.",
+    ],
+    4: [
+        "Airflow: schedule the feature pipeline.",
+        "Feast / Databricks Feature Store: only if online serving needs the same features at low latency.",
+    ],
+    5: [
+        "MLflow Tracking: log every run (params, metrics, data version, git SHA).",
+        "Optuna: tuning with pruning, logged to MLflow. Do it after the baseline and features are solid.",
+    ],
+    6: [
+        "MLflow Tracking: store backtest metrics and segment reports so runs are comparable.",
+    ],
+    7: [
+        "Batch: Airflow task that scores and writes a table. Online: Docker + FastAPI, or managed serving (SageMaker, Vertex AI, Databricks Model Serving).",
+        "GitHub Actions: build and deploy the image.",
+    ],
+    8: [
+        "Evidently: feature, prediction and performance drift. Prometheus + Grafana: latency and errors.",
+        "Airflow: scheduled retraining and drift-triggered retrain runs.",
+    ],
+    9: [
+        "MLflow Model Registry: promote a version with an alias (champion/challenger) and keep the previous one for rollback.",
+        "GitHub Actions: CI/CD with canary deploy and automated guardrail checks.",
+    ],
+}
+
+DIAGRAM_TOOLS = {
+    "End-to-end ML system": "Airflow orchestrates ingestion, features and training; MLflow tracks runs and holds the registry; Evidently + Grafana monitor; GitHub Actions ships the code.",
+    "Batch vs online vs streaming serving": "Batch: Airflow job writing a table. Online: FastAPI or a managed endpoint. Streaming: Kafka/Flink or Spark Structured Streaming, only when seconds-level freshness is a stated need.",
+    "Feature store and training/serving skew": "Feast or Databricks Feature Store provide the shared definitions and online/offline stores; Airflow runs the batch materialisation.",
+    "CI/CD for ML": "GitHub Actions runs the pipeline; Great Expectations does data checks; MLflow Tracking records the candidate; MLflow Registry promotes it.",
+    "Monitoring and retraining loop": "Evidently for drift and performance reports, Prometheus + Grafana for system health, Airflow to run the retrain and verification.",
+}
+
 # ---------------------------------------------------------------------------
 # Tab 2: architecture diagrams
 # ---------------------------------------------------------------------------
@@ -163,14 +203,14 @@ DIAGRAMS = [
             """
   subgraph cluster_data { label="Data"; color="#9ca3af"; fontname="Helvetica"; fontsize=11;
     src [label="Sources\\n(orders, events,\\ncatalog)"];
-    ing [label="Ingestion\\n+ validation"];
+    ing [label="Ingestion\\n+ validation\\n(Airflow, Great Expectations)"];
     lake [label="Data lake /\\nwarehouse", shape=cylinder, fillcolor="#fdf2e0", color="#d98c1f"];
     src -> ing -> lake;
   }
   subgraph cluster_train { label="Training"; color="#9ca3af"; fontname="Helvetica"; fontsize=11;
-    feat [label="Feature\\npipeline"];
-    train [label="Training +\\nevaluation"];
-    reg [label="Model registry", shape=cylinder, fillcolor="#fdf2e0", color="#d98c1f"];
+    feat [label="Feature\\npipeline\\n(Airflow)"];
+    train [label="Training + evaluation\\n(MLflow Tracking)"];
+    reg [label="Model registry\\n(MLflow)", shape=cylinder, fillcolor="#fdf2e0", color="#d98c1f"];
     feat -> train -> reg;
   }
   subgraph cluster_serve { label="Serving"; color="#9ca3af"; fontname="Helvetica"; fontsize=11;
@@ -178,7 +218,7 @@ DIAGRAMS = [
     app [label="Product / planners"];
     api -> app;
   }
-  mon [label="Monitoring\\n(data, model, system)", fillcolor="#fde8e8", color="#e45756"];
+  mon [label="Monitoring (data, model, system)\\n(Evidently, Grafana)", fillcolor="#fde8e8", color="#e45756"];
   lake -> feat;
   reg -> api;
   api -> mon;
@@ -222,7 +262,7 @@ DIAGRAMS = [
         "description": "One feature definition feeds both the offline store (training, point-in-time correct) and the online store (low-latency lookup), so the two cannot diverge.",
         "dot": dot(
             """
-  defs [label="Feature definitions\\n(one code path)", fillcolor="#e6f4ea", color="#2e7d32"];
+  defs [label="Feature definitions\\n(one code path, e.g. Feast)", fillcolor="#e6f4ea", color="#2e7d32"];
   off [label="Offline store\\n(warehouse)", shape=cylinder, fillcolor="#fdf2e0", color="#d98c1f"];
   on [label="Online store\\n(key-value, low latency)", shape=cylinder, fillcolor="#fdf2e0", color="#d98c1f"];
   tr [label="Training job\\n(point-in-time join)"];
@@ -245,12 +285,12 @@ DIAGRAMS = [
         "description": "Code, data and model each get checks before anything reaches production.",
         "dot": dot(
             """
-  pr [label="Pull request"];
-  ci [label="CI\\nlint, unit tests,\\nfeature tests"];
-  dq [label="Data checks\\nschema, nulls,\\nranges"];
-  trn [label="Train + evaluate\\nvs baseline"];
+  pr [label="Pull request\\n(GitHub)"];
+  ci [label="CI (GitHub Actions)\\nlint, unit tests,\\nfeature tests"];
+  dq [label="Data checks\\nschema, nulls, ranges\\n(Great Expectations)"];
+  trn [label="Train + evaluate vs baseline\\n(MLflow Tracking)"];
   gate [label="Quality gate\\nbeats champion?", shape=diamond, fillcolor="#fdf2e0", color="#d98c1f"];
-  reg [label="Register model\\n+ version"];
+  reg [label="Register model + version\\n(MLflow Registry)"];
   stg [label="Staging /\\nshadow"];
   can [label="Canary\\n5% traffic"];
   full [label="Full rollout", fillcolor="#e6f4ea", color="#2e7d32"];
@@ -273,7 +313,7 @@ DIAGRAMS = [
         "dot": dot(
             """
   d [label="Data quality\\nnulls, schema, volume"];
-  f [label="Feature drift\\nPSI / KS"];
+  f [label="Feature drift\\nPSI / KS (Evidently)"];
   p [label="Prediction drift\\nscore distribution"];
   m [label="Model performance\\nwhen labels arrive"];
   b [label="Business KPI\\nconversion, margin"];
@@ -304,15 +344,15 @@ REPO_TREE = """retail-forecasting/
 ├── .gitignore
 ├── .pre-commit-config.yaml    # formatting, lint, secret scan
 ├── .github/workflows/
-│   ├── ci.yml                 # lint + unit tests on every PR
-│   └── train.yml              # scheduled or manual training pipeline
+│   ├── ci.yml                 # GitHub Actions: lint + unit tests on every PR
+│   └── train.yml              # GitHub Actions: validate/train on merge, build image
 │
 ├── configs/                   # behaviour lives here, not in code
 │   ├── base.yaml              # paths, horizon, split dates
 │   ├── features.yaml          # feature list and windows
 │   └── model/lightgbm.yaml    # hyper-parameters per model
 │
-├── data/                      # git-ignored; tracked with DVC or a data catalog
+├── data/                      # git-ignored; versioned with DVC (or Delta time travel)
 │   ├── raw/                   # immutable source extracts
 │   ├── interim/               # cleaned, joined
 │   └── processed/             # model-ready tables
@@ -324,12 +364,12 @@ REPO_TREE = """retail-forecasting/
 ├── src/forecasting/           # the installable package (all real logic)
 │   ├── data/                  # load.py, validate.py (schema + quality checks)
 │   ├── features/              # build.py: one code path for train and serve
-│   ├── models/                # train.py, predict.py, registry.py
+│   ├── models/                # train.py, predict.py, registry.py (MLflow tracking + registry)
 │   ├── evaluation/            # metrics.py, backtest.py, segment_report.py
 │   ├── serving/               # api.py (FastAPI) or batch_score.py
-│   └── monitoring/            # drift.py, data_quality.py
+│   └── monitoring/            # drift.py (Evidently), data_quality.py (Great Expectations)
 │
-├── pipelines/                 # thin entrypoints that call src/ (one per stage)
+├── pipelines/                 # thin entrypoints that call src/; Airflow tasks call these
 │   ├── run_features.py
 │   ├── run_training.py
 │   └── run_batch_scoring.py
@@ -390,10 +430,10 @@ REPO_FLOW_DIAGRAM = dot(
   raw [label="data/raw", shape=cylinder, fillcolor="#fdf2e0", color="#d98c1f"];
   val [label="src/data\\nload + validate"];
   fe [label="src/features\\nbuild"];
-  tr [label="src/models\\ntrain"];
+  tr [label="src/models\\ntrain (+ Optuna)"];
   ev [label="src/evaluation\\nbacktest + segments"];
-  reg [label="Model registry\\n+ tracking", shape=cylinder, fillcolor="#fdf2e0", color="#d98c1f"];
-  sv [label="src/serving\\nbatch or API"];
+  reg [label="Model registry + tracking\\n(MLflow)", shape=cylinder, fillcolor="#fdf2e0", color="#d98c1f"];
+  sv [label="src/serving\\nbatch (Airflow) or API (FastAPI)"];
   mo [label="src/monitoring", fillcolor="#fde8e8", color="#e45756"];
   raw -> val -> fe -> tr -> ev -> reg -> sv -> mo;
   cfg -> val; cfg -> fe; cfg -> tr;

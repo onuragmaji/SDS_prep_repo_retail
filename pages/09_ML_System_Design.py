@@ -3,13 +3,16 @@ import math
 import pandas as pd
 import streamlit as st
 
+from content.mlops_tooling import MLOPS_TOOLING_GUIDE, START_SMALL_NOTE
 from content.ml_system_design import (
     CONFIG_EXAMPLE,
+    DIAGRAM_TOOLS,
     DIAGRAMS,
     FIRST_FIVE_MINUTES,
     FOLLOWUP_QA,
     FRAMEWORK_DIAGRAM,
     FRAMEWORK_STEPS,
+    FRAMEWORK_TOOLS,
     METRICS_CHEATSHEET,
     PIPELINE_EXAMPLE,
     REPO_ANTI_PATTERNS,
@@ -59,6 +62,8 @@ with tab_fw:
             st.markdown("\n".join(f"- {q}" for q in s["ask"]))
             st.markdown("**Common mistakes**")
             st.markdown("\n".join(f"- {m}" for m in s["mistakes"]))
+            st.markdown("**Tools to consider**")
+            st.markdown("\n".join(f"- {t}" for t in FRAMEWORK_TOOLS[s["step"]]))
 
     left, right = st.columns(2)
     with left:
@@ -84,6 +89,8 @@ with tab_arch:
                 st.dataframe(pd.DataFrame(d["table"]), hide_index=True, width="stretch")
             st.markdown("**Talking points**")
             st.markdown("\n".join(f"- {n}" for n in d["notes"]))
+            if d["title"] in DIAGRAM_TOOLS:
+                st.caption(f":material/build: Where tools fit: {DIAGRAM_TOOLS[d['title']]}")
 
 # ---------------------------------------------------------------- Repo
 with tab_repo:
@@ -145,6 +152,10 @@ with tab_prep:
     for item in FOLLOWUP_QA:
         with st.expander(item["q"]):
             st.markdown(item["a"])
+
+    st.subheader("Tools cheat sheet: what to use where")
+    st.dataframe(pd.DataFrame(MLOPS_TOOLING_GUIDE), hide_index=True, width="stretch")
+    st.caption(START_SMALL_NOTE)
 
     st.subheader("Metrics cheat sheet")
     st.dataframe(pd.DataFrame(METRICS_CHEATSHEET), hide_index=True, width="stretch")

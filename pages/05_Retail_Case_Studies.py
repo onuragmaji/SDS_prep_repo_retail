@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 from scipy.stats import norm
 
+from content.mlops_tooling import MLOPS_TOOLING_GUIDE, START_SMALL_NOTE, TOOLING_HINTS_BY_CASE
 from content.retail_case_studies import CASE_STUDIES, CASE_STUDIES_BY_ID, SELF_CHECK_ITEMS, TIER_ORDER
 
 st.title("Retail & Fashion Data Science Case Studies")
@@ -17,6 +18,10 @@ business decision → deployment → business impact. Pick a case from the sideb
 Mode** to rehearse before revealing the full framework and solution.
 """
 )
+
+with st.expander(":material/build: MLOps tooling cheat sheet: what to use where"):
+    st.dataframe(pd.DataFrame(MLOPS_TOOLING_GUIDE), hide_index=True, width="stretch")
+    st.caption(START_SMALL_NOTE)
 
 st.sidebar.markdown("### Case Studies")
 ordered_cases = sorted(CASE_STUDIES, key=lambda c: TIER_ORDER.index(c["tier"]))
@@ -466,6 +471,12 @@ def _render_full_sections(case):
 
     with st.expander(":material/rocket_launch: Deployment & monitoring"):
         _bullets(case["deployment"])
+
+    tooling_hints = TOOLING_HINTS_BY_CASE.get(case["id"])
+    if tooling_hints:
+        with st.expander(":material/build: Tools to consider (MLflow, Airflow, CI/CD)"):
+            _bullets(tooling_hints)
+            st.caption(START_SMALL_NOTE)
 
     with st.expander(":material/trending_up: Business impact"):
         st.markdown(case["business_impact"])
