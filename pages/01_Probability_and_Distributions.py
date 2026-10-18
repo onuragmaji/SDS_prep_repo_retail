@@ -959,7 +959,288 @@ with st.expander(":material/school: Interview prep: Uniform"):
 
 st.markdown("---")
 
-st.subheader("8. Quick interpretation cheat sheet")
+st.subheader("8. Probability via simulation (Monte Carlo)")
+st.markdown(
+    """
+When a probability or expected value is hard to derive by hand, interviewers often ask you to
+**write simulation code** instead. The idea: let the computer play out the random process many times
+and read the answer off the results.
+"""
+)
+
+# --- 8.1 The Monte Carlo recipe ---
+st.markdown("#### 8.1 The Monte Carlo recipe")
+st.markdown(
+    """
+**Intuition:** Replace a hard calculation with a *repeated experiment*. Simulate the random process
+N times, then average. An average of indicators estimates a probability; an average of values estimates
+an expected value (this is the Law of Large Numbers from 2.7 put to work).
+"""
+)
+st.latex(r"\hat{\mu} = \frac{1}{N}\sum_{i=1}^{N} f(X_i), \qquad SE(\hat{\mu}) = \frac{\sigma}{\sqrt{N}}")
+st.markdown(
+    """
+1. Define the random experiment (what is random, and what is the outcome you care about?)
+2. Simulate it N times, vectorised with NumPy, with a seeded generator
+3. Average the outcomes (an indicator for a probability, the value itself for an expected value)
+4. Report the estimate **with its standard error**
+"""
+)
+st.code(
+    """import numpy as np
+
+rng = np.random.default_rng(42)
+N = 100_000
+
+# Example: P(sum of two dice >= 10)
+rolls = rng.integers(1, 7, size=(N, 2)).sum(axis=1)
+p_hat = (rolls >= 10).mean()
+se = np.sqrt(p_hat * (1 - p_hat) / N)
+print(f"{p_hat:.4f} +/- {1.96 * se:.4f}")   # exact answer is 6/36 = 0.1667""",
+    language="python",
+)
+
+# --- 8.2 Estimating an expected value ---
+st.markdown("#### 8.2 Estimating an expected value")
+st.markdown(
+    """
+**Interactive:** the promotional spin-wheel from 2.4, but estimated by simulation instead of the
+formula. Watch the estimate settle onto the exact expected cost as N grows.
+"""
+)
+mc_aov = st.slider("Average order value (₹)", 500, 5000, 2000, 100, key="mc_ev_aov")
+mc_w1 = st.slider("% chance: 10% discount coupon", 0, 100, 60, 1, key="mc_ev_w1")
+mc_w2 = st.slider("% chance: 20% discount coupon", 0, 100, 30, 1, key="mc_ev_w2")
+mc_n_ev = st.slider("Number of simulated customers", 10, 200000, 5000, 10, key="mc_ev_n")
+mc_w3 = max(0, 100 - mc_w1 - mc_w2)
+st.caption(f"Remaining probability → free ₹500 product: **{mc_w3}%**")
+
+mc_costs = np.array([0.10 * mc_aov, 0.20 * mc_aov, 500.0])
+mc_probs = np.array([mc_w1, mc_w2, mc_w3], dtype=float)
+mc_probs = mc_probs / mc_probs.sum()
+mc_exact_ev = float((mc_costs * mc_probs).sum())
+
+rng_mc_ev = np.random.default_rng(mc_w1 * 1000 + mc_w2 + 7)
+mc_draws = rng_mc_ev.choice(mc_costs, size=200000, p=mc_probs)
+mc_running = np.cumsum(mc_draws) / np.arange(1, 200001)
+mc_est_ev = float(mc_running[mc_n_ev - 1])
+mc_se_ev = float(mc_draws[:mc_n_ev].std(ddof=1) / np.sqrt(mc_n_ev)) if mc_n_ev > 1 else 0.0
+
+m1, m2, m3 = st.columns(3)
+m1.metric("Simulated E[cost]", f"₹{mc_est_ev:.2f}")
+m2.metric("Exact E[cost]", f"₹{mc_exact_ev:.2f}")
+m3.metric("Error", f"₹{mc_est_ev - mc_exact_ev:+.2f}", help=f"Standard error ≈ ₹{mc_se_ev:.2f}")
+
+fig_mc_ev, ax_mc_ev = plt.subplots(figsize=(8, 4))
+ax_mc_ev.plot(np.arange(1, mc_n_ev + 1), mc_running[:mc_n_ev], color="#4c78a8", label="Running simulated mean")
+ax_mc_ev.axhline(mc_exact_ev, color="black", linestyle="--", linewidth=1, label=f"Exact = ₹{mc_exact_ev:.2f}")
+ax_mc_ev.set_xscale("log")
+ax_mc_ev.set_xlabel("Number of simulations (log scale)")
+ax_mc_ev.set_ylabel("Estimated cost per customer (₹)")
+ax_mc_ev.legend()
+st.pyplot(fig_mc_ev)
+st.write(f"After {mc_n_ev:,} simulated customers: **₹{mc_est_ev:.2f}** (standard error about ₹{mc_se_ev:.2f}).")
+
+with st.expander(":material/storefront: Retail example: budgeting when the formula is messy"):
+    st.markdown(
+        """
+The wheel is simple enough to solve by hand, but real promos have caps, stacking rules and
+purchase-dependent discounts. Simulating a few hundred thousand customers gives the budget number
+without deriving a closed form, and the standard error tells finance how precise it is.
+"""
+    )
+
+# --- 8.3 Estimating a probability ---
+st.markdown("#### 8.3 Estimating a probability")
+st.markdown(
+    """
+**Interactive:** daily demand for a SKU is Poisson. Estimate the chance of a **stock-out**
+(demand exceeds stock) by simulation and compare with the exact Poisson answer.
+"""
+)
+mc_lam = st.slider("Average daily demand (units)", 1, 100, 20, 1, key="mc_po_lam")
+mc_stock = st.slider("Units in stock", 0, 150, 25, 1, key="mc_po_stock")
+mc_n_po = st.slider("Number of simulated days", 100, 200000, 10000, 100, key="mc_po_n")
+
+rng_mc_po = np.random.default_rng(mc_lam * 1000 + 3)
+mc_days = rng_mc_po.poisson(mc_lam, mc_n_po)
+mc_p_hat = float((mc_days > mc_stock).mean())
+mc_p_exact = float(poisson.sf(mc_stock, mc_lam))
+mc_se_po = float(np.sqrt(mc_p_hat * (1 - mc_p_hat) / mc_n_po))
+
+m1, m2, m3 = st.columns(3)
+m1.metric("Simulated P(stock-out)", f"{mc_p_hat:.4f}")
+m2.metric("Exact P(stock-out)", f"{mc_p_exact:.4f}")
+m3.metric("95% interval", f"±{1.96 * mc_se_po:.4f}")
+
+fig_mc_po, ax_mc_po = plt.subplots(figsize=(8, 4))
+mc_vals, mc_counts = np.unique(mc_days, return_counts=True)
+mc_bar_colors = ["#e45756" if v > mc_stock else "#4c78a8" for v in mc_vals]
+ax_mc_po.bar(mc_vals, mc_counts / mc_n_po, color=mc_bar_colors)
+ax_mc_po.axvline(mc_stock + 0.5, color="black", linestyle="--", linewidth=1, label=f"Stock = {mc_stock}")
+ax_mc_po.set_xlabel("Units demanded in a day")
+ax_mc_po.set_ylabel("Share of simulated days")
+ax_mc_po.legend()
+st.pyplot(fig_mc_po)
+if mc_p_hat == 0:
+    st.info("No simulated stock-outs. For rare events you need many more simulations (or importance sampling) to estimate the probability.")
+st.write(f"Red bars are stock-out days: **{mc_p_hat:.4f}** simulated vs **{mc_p_exact:.4f}** exact.")
+
+with st.expander(":material/storefront: Retail example: how much safety stock?"):
+    st.markdown(
+        """
+Raise the stock slider until the stock-out probability drops below your service target (say 5%).
+That is exactly how simulation supports a safety-stock decision when demand is noisy.
+"""
+    )
+
+# --- 8.4 Classic interview puzzle ---
+st.markdown("#### 8.4 Classic interview puzzle: the birthday problem")
+st.markdown(
+    """
+**Interactive:** how likely is it that at least two of *k* people share a birthday? Simulate rooms of
+k people and compare with the exact formula.
+"""
+)
+mc_k = st.slider("People in the room (k)", 2, 60, 23, 1, key="mc_bd_k")
+mc_n_bd = st.slider("Number of simulated rooms", 1000, 50000, 10000, 1000, key="mc_bd_n")
+
+rng_mc_bd = np.random.default_rng(mc_k + 11)
+mc_birthdays = rng_mc_bd.integers(0, 365, size=(mc_n_bd, mc_k))
+mc_shared = (np.diff(np.sort(mc_birthdays, axis=1), axis=1) == 0).any(axis=1)
+mc_bd_hat = float(mc_shared.mean())
+
+
+def mc_birthday_exact(people):
+    return 1 - float(np.prod((365 - np.arange(people)) / 365))
+
+
+m1, m2 = st.columns(2)
+m1.metric("Simulated P(shared birthday)", f"{mc_bd_hat:.3f}")
+m2.metric("Exact", f"{mc_birthday_exact(mc_k):.3f}")
+
+mc_ks = np.arange(2, 61)
+fig_mc_bd, ax_mc_bd = plt.subplots(figsize=(8, 4))
+ax_mc_bd.plot(mc_ks, [mc_birthday_exact(int(kk)) for kk in mc_ks], color="#4c78a8", label="Exact")
+ax_mc_bd.scatter([mc_k], [mc_bd_hat], color="#e45756", zorder=3, label="Simulated (your k)")
+ax_mc_bd.axhline(0.5, color="gray", linestyle=":", linewidth=1)
+ax_mc_bd.set_xlabel("People in the room")
+ax_mc_bd.set_ylabel("P(at least one shared birthday)")
+ax_mc_bd.legend()
+st.pyplot(fig_mc_bd)
+st.write("With just 23 people the chance already passes 50%, which surprises most people.")
+
+with st.expander(":material/code: More simulation puzzles interviewers like"):
+    st.code(
+        """import numpy as np
+rng = np.random.default_rng(0)
+N = 100_000
+
+# E[max of two dice] (exact = 161/36 = 4.47)
+print(rng.integers(1, 7, size=(N, 2)).max(axis=1).mean())
+
+# Coupon collector: expected rolls to see all 6 faces (exact = 14.7)
+def rolls_to_all_faces():
+    seen, n = set(), 0
+    while len(seen) < 6:
+        seen.add(rng.integers(1, 7)); n += 1
+    return n
+print(np.mean([rolls_to_all_faces() for _ in range(20_000)]))
+
+# Monty Hall: win probability if you switch (exact = 2/3)
+car = rng.integers(0, 3, N)
+pick = rng.integers(0, 3, N)
+print((car != pick).mean())   # switching wins exactly when the first pick was wrong""",
+        language="python",
+    )
+
+# --- 8.5 Simulating business risk ---
+st.markdown("#### 8.5 Simulating a business outcome (profit distribution)")
+st.markdown(
+    """
+**Interactive:** you order *Q* units before knowing demand. Each unit costs you the unit cost and sells
+for ₹1,000; unsold units are worthless. Simulate demand to see the **distribution** of profit, not just its average.
+"""
+)
+mc_q = st.slider("Units ordered (Q)", 50, 400, 150, 10, key="mc_bz_q")
+mc_mu = st.slider("Mean demand", 50, 300, 120, 10, key="mc_bz_mu")
+mc_sd = st.slider("Demand standard deviation", 5, 80, 30, 5, key="mc_bz_sd")
+mc_unit_cost = st.slider("Unit cost (₹)", 300, 900, 600, 50, key="mc_bz_cost")
+
+rng_mc_bz = np.random.default_rng(mc_mu * 100 + mc_sd)
+mc_demand = np.clip(np.round(rng_mc_bz.normal(mc_mu, mc_sd, 20000)), 0, None)
+mc_profit = 1000 * np.minimum(mc_demand, mc_q) - mc_unit_cost * mc_q
+
+m1, m2, m3 = st.columns(3)
+m1.metric("Mean profit", f"₹{mc_profit.mean():,.0f}")
+m2.metric("P(loss)", f"{(mc_profit < 0).mean():.1%}")
+m3.metric("5th percentile", f"₹{np.percentile(mc_profit, 5):,.0f}", help="A bad-case outcome: 95% of simulated days do better.")
+
+fig_mc_bz, ax_mc_bz = plt.subplots(figsize=(8, 4))
+ax_mc_bz.hist(mc_profit, bins=40, color="#b279a2", edgecolor="white")
+ax_mc_bz.axvline(0, color="black", linestyle="--", linewidth=1)
+ax_mc_bz.axvline(mc_profit.mean(), color="#e45756", linewidth=2, label="Mean")
+ax_mc_bz.set_xlabel("Profit (₹)")
+ax_mc_bz.set_ylabel("Simulated outcomes")
+ax_mc_bz.legend()
+st.pyplot(fig_mc_bz)
+
+with st.expander(":material/storefront: Retail example: choosing an order quantity"):
+    st.markdown(
+        """
+Sweep Q and compare mean profit with the 5th percentile. The Q that maximises the mean is often not the
+one a risk-averse buyer picks. Expected value alone (see the caveat in 2.4) hides this trade-off.
+"""
+    )
+
+# --- 8.6 Accuracy ---
+st.markdown("#### 8.6 How accurate is a simulation?")
+st.markdown(
+    """
+**Interactive:** repeat an estimate of a probability 300 times at each N and measure how far it typically
+lands from the truth. Error falls like $1/\\sqrt{N}$: **100× more simulations buys only 10× more precision.**
+"""
+)
+mc_true_p = st.slider("True probability p", 0.01, 0.99, 0.30, 0.01, key="mc_acc_p")
+
+rng_mc_acc = np.random.default_rng(int(mc_true_p * 1000) + 5)
+mc_sizes = np.array([10, 100, 1000, 10000, 100000])
+# Binomial(N, p) / N has the same distribution as the mean of N Bernoulli simulations, so no loop is needed.
+mc_rmse = [
+    float(np.sqrt(np.mean((rng_mc_acc.binomial(n_sim, mc_true_p, 300) / n_sim - mc_true_p) ** 2)))
+    for n_sim in mc_sizes
+]
+
+fig_mc_acc, ax_mc_acc = plt.subplots(figsize=(8, 4))
+ax_mc_acc.loglog(mc_sizes, mc_rmse, "o-", color="#4c78a8", label="Typical error (RMSE)")
+ax_mc_acc.loglog(mc_sizes, np.sqrt(mc_true_p * (1 - mc_true_p) / mc_sizes), "--", color="black", label="Theory: sqrt(p(1-p)/N)")
+ax_mc_acc.set_xlabel("Number of simulations N")
+ax_mc_acc.set_ylabel("Error of the estimate")
+ax_mc_acc.legend()
+st.pyplot(fig_mc_acc)
+
+with st.expander(":material/school: Interview prep: Monte Carlo simulation"):
+    st.markdown(
+        """
+**In one line:** simulate the random process many times, average the outcomes, and report the estimate with its standard error.
+
+**You might get asked:**
+- Write code to estimate the expected number of rolls to see all six faces of a die.
+- How many simulations do you need for ±0.01 accuracy on a probability near 0.3?
+- Estimate a rare-event probability (say 1 in a million). Why does plain simulation struggle?
+
+**How to answer:**
+- Always give a number *and* its uncertainty: p̂ ± 1.96·√(p̂(1−p̂)/N).
+- Sample size for a target margin m: N ≈ 1.96²·p(1−p)/m², about 8,000 for ±0.01 at p = 0.3.
+- Seed the generator (`default_rng(seed)`) so results are reproducible, and vectorise instead of looping.
+- For rare events, mention importance sampling; to cut variance, mention antithetic variates or common random numbers.
+- If an exact answer is easy, say so and use the simulation to check it.
+"""
+    )
+
+st.markdown("---")
+
+st.subheader("9. Quick interpretation cheat sheet")
 st.markdown(
     """
 **Concepts:**
@@ -979,6 +1260,9 @@ st.markdown(
 - Normal: many continuous measurements cluster around a mean
 - Exponential: time between events in a Poisson process
 - Uniform: every outcome in a range is equally likely
+
+**Simulation:**
+- Monte Carlo: simulate the process N times, average, and report the estimate with its standard error (error shrinks like 1/√N)
 """
 )
 
