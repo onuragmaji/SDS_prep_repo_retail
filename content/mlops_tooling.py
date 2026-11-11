@@ -75,6 +75,13 @@ MLOPS_TOOLING_GUIDE = [
 
 # Per-case pointers: "Step: tool, why". Keys are case ids from content/retail_case_studies.py.
 TOOLING_HINTS_BY_CASE = {
+    "long_range_forecasting": [
+        "Monthly consolidated scheduled run plus on-demand jobs for user-defined UPC groups: Airflow DAG with a manual trigger.",
+        "Snapshot store plans, promo calendars and overrides with a plan-vintage date so backtests can rebuild what was known: versioned tables (e.g., Delta/BigQuery snapshots).",
+        "Log every rolling-origin backtest, WAPE/bias by horizon and segment, and scenario assumptions: MLflow Tracking.",
+        "Reconciliation checks (UPC to PG to supplier sums) and mapping/WBE factor validation before publishing: pandera or Great Expectations.",
+        "Bias and WAPE by horizon as actuals land, plus override-rate tracking: scheduled SQL checks or Evidently with alerts.",
+    ],
     "demand_forecasting": [
         "Weekly retrain + nightly batch scoring: an Airflow DAG (ingest, validate, features, train, score, publish).",
         "POS and inventory feed checks before training: Great Expectations or pandera (nulls, negative units, missing stores).",

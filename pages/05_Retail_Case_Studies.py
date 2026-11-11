@@ -391,6 +391,276 @@ def _calc_new_product_forecasting(case):
     plt.close(fig)
 
 
+# ---------- Long-range forecasting: examples & interactive demos ----------
+
+def _lrf_weekly_history(rng, weeks=156, stores0=1000, store_growth_per_week=0.0, base=100.0):
+    t = np.arange(weeks)
+    stores = stores0 + store_growth_per_week * t
+    season = 1 + 0.25 * np.sin(2 * np.pi * t / 52)
+    per_store = base / stores0
+    return t, stores, per_store * stores * season * rng.normal(1, 0.04, weeks)
+
+
+def _lrf_store_path(mode, weeks_hist, weeks_fut, stores0, planned_total, ramp_weeks):
+    """Store count path over history+future. Planned openings spread evenly across the future."""
+    n = weeks_hist + weeks_fut
+    stores = np.full(n, float(stores0))
+    if mode == "Planned openings":
+        opens = planned_total / weeks_fut
+        for k in range(weeks_fut):
+            # each week's openings ramp from 0 to full contribution over ramp_weeks
+            ramp = np.clip((np.arange(n) - (weeks_hist + k)) / max(ramp_weeks, 1), 0, 1)
+            ramp[: weeks_hist + k] = 0
+            stores += opens * ramp
+    return stores
+
+
+def _demo_store_growth(cid):
+    st.markdown(
+        "**Diagnostic experiments for runaway growth.** Same history, three store scenarios. "
+        "Demand = demand per effective store x store count x seasonality. If demand grows far faster than the store estate, "
+        "the model's store effect (or trend) is the problem, not the data."
+    )
+    c1, c2, c3, c4 = st.columns(4)
+    mode = c1.radio("Store feature", ["No store feature", "Constant stores", "Planned openings"], index=2, key=f"demo_{cid}_sg_mode")
+    planned = c2.slider("Planned new stores (5y)", 0, 800, 300, step=50, key=f"demo_{cid}_sg_planned")
+    ramp = c3.slider("Ramp-up weeks", 1, 52, 26, key=f"demo_{cid}_sg_ramp")
+    elasticity = c4.slider("Store-effect strength (1 = proportional)", 0.0, 2.0, 1.0, step=0.1, key=f"demo_{cid}_sg_elast")
+    damp = st.slider("Trend damping (0 = none)", 0.0, 0.9, 0.0, step=0.05, key=f"demo_{cid}_sg_damp")
+
+    rng = np.random.default_rng(7)
+    wh, wf, stores0 = 156, 260, 1000
+    t_h, _, hist = _lrf_weekly_history(rng, wh, stores0)
+    t_all = np.arange(wh + wf)
+    stores = _lrf_store_path(mode, wh, wf, stores0, planned, ramp)
+    if mode == "No store feature":
+        stores = np.full(wh + wf, float(stores0))
+    season = 1 + 0.25 * np.sin(2 * np.pi * t_all / 52)
+    base = hist.mean() / season[:wh].mean()
+    store_mult = (stores / stores0) ** elasticity
+    fut_weeks = np.arange(wf)
+    damped_trend = 1 + 0.0  # underlying like-for-like trend is flat; damping scales any extra growth
+    growth_extra = (1 - damp)
+    proj = base * season * (1 + (store_mult - 1) * growth_extra)[: wh + wf]
+    proj = proj[wh:]
+
+    fig, ax = plt.subplots(figsize=(8, 3.2))
+    ax.plot(t_h, hist, label="History (3y)", color="gray")
+    ax.plot(wh + fut_weeks, proj, label="5y projection", color="tab:blue")
+    ax.axvline(wh, linestyle=":", color="k")
+    ax.set_xlabel("Week")
+    ax.set_ylabel("Weekly units")
+    ax.legend()
+    st.pyplot(fig)
+    plt.close(fig)
+
+    annual = [proj[i * 52:(i + 1) * 52].sum() for i in range(5)]
+    last_hist = hist[-52:].sum()
+    rows, prev = [], last_hist
+    for i, a in enumerate(annual):
+        rows.append({"Year": f"Y{i + 1}", "Units": f"{a:,.0f}", "YoY": f"{a / prev - 1:+.1%}", "Stores (end)": f"{stores[wh + (i + 1) * 52 - 1]:,.0f}"})
+        prev = a
+    st.table(pd.DataFrame(rows))
+    total_growth = annual[-1] / last_hist - 1
+    store_growth = stores[-1] / stores0 - 1
+    st.caption(
+        f"Demand growth Y5 vs last history year: {total_growth:+.0%}; store estate growth: {store_growth:+.0%}. "
+        "Try setting store-effect strength above 1 to see how an over-large coefficient creates 'extreme' growth, "
+        "then lengthen the ramp-up to see a more realistic opening profile."
+    )
+
+
+def _demo_composition(cid):
+    st.markdown("**Finished UPCs to ingredient buying volume (many-to-many).** Edit volumes, waste and see supplier requirements.")
+    recipes = {
+        "Chicken salad": {"Chicken": 0.15, "Avocado": 0.08, "Lettuce": 0.05},
+        "Chicken wrap": {"Chicken": 0.12, "Lettuce": 0.03},
+        "Avocado toast": {"Avocado": 0.10},
+    }
+    cols = st.columns(3)
+    vols = {}
+    for col, name, default in zip(cols, recipes, [1000, 2000, 500]):
+        vols[name] = col.number_input(f"{name} units", 0, 1_000_000, default, step=100, key=f"demo_{cid}_comp_{name}")
+    waste = st.slider("Waste / yield uplift (%)", 0, 30, 10, key=f"demo_{cid}_comp_waste")
+
+    rows = {}
+    for upc, parts in recipes.items():
+        for comp, q in parts.items():
+            rows.setdefault(comp, {})[upc] = vols[upc] * q
+    df = pd.DataFrame(rows).T.fillna(0.0)
+    df["Net kg"] = df.sum(axis=1)
+    df["Buying kg (incl. waste)"] = df["Net kg"] * (1 + waste / 100)
+    st.dataframe(df.round(1), width="stretch")
+    st.bar_chart(df[["Net kg", "Buying kg (incl. waste)"]])
+    st.caption("One UPC drives several ingredients and each ingredient serves several UPCs, so a 10% UPC forecast error propagates unevenly to suppliers.")
+
+
+def _demo_allocation(cid):
+    st.markdown(
+        "**Why recent-share allocation can mislead.** One PG contains an everyday UPC and a Christmas-only UPC. "
+        "The PG total is forecast perfectly; the only question is how it is split."
+    )
+    window = st.select_slider("Share window used for allocation", ["Last 3 months", "Last 6 months", "Last 12 months", "Seasonal profile (by week of year)"], value="Last 6 months", key=f"demo_{cid}_al_window")
+    rng = np.random.default_rng(3)
+    weeks = np.arange(104)
+    woy = weeks % 52
+    everyday = 100 * (1 + 0.1 * np.sin(2 * np.pi * woy / 52)) * rng.normal(1, 0.03, 104)
+    xmas = np.where((woy >= 44) & (woy <= 51), 400, 0) * rng.normal(1, 0.05, 104)
+    total = everyday + xmas
+
+    origin = 52 + 36  # forecast origin around September of year 2, so the 'recent' window excludes Christmas
+    horizon = np.arange(origin, 104)  # forecast Sep-Dec of year 2
+    n_back = {"Last 3 months": 13, "Last 6 months": 26, "Last 12 months": 52}.get(window)
+    if n_back:
+        sl = slice(origin - n_back, origin)
+        share_x = xmas[sl].sum() / total[sl].sum()
+        alloc_x = total[horizon] * share_x
+    else:
+        prev = (horizon - 52)
+        share_by_week = xmas[prev] / total[prev]
+        alloc_x = total[horizon] * share_by_week
+    alloc_e = total[horizon] - alloc_x
+
+    def wape(a, f):
+        return np.abs(a - f).sum() / a.sum()
+
+    def bias(a, f):
+        return (f - a).sum() / a.sum()
+
+    m = st.columns(4)
+    m[0].metric("Everyday UPC WAPE", f"{wape(everyday[horizon], alloc_e):.0%}", f"bias {bias(everyday[horizon], alloc_e):+.0%}", delta_color="off")
+    m[1].metric("Christmas UPC WAPE", f"{wape(xmas[horizon], alloc_x):.0%}", f"bias {bias(xmas[horizon], alloc_x):+.0%}", delta_color="off")
+    m[2].metric("PG WAPE", f"{wape(total[horizon], alloc_e + alloc_x):.0%}")
+    m[3].metric("Christmas UPC volume", f"{alloc_x.sum():,.0f} vs {xmas[horizon].sum():,.0f} actual")
+
+    fig, ax = plt.subplots(figsize=(8, 3))
+    ax.plot(horizon, xmas[horizon], label="Christmas UPC actual", color="tab:red")
+    ax.plot(horizon, alloc_x, "--", label="Allocated", color="tab:red", alpha=0.6)
+    ax.plot(horizon, everyday[horizon], label="Everyday UPC actual", color="tab:green")
+    ax.plot(horizon, alloc_e, "--", label="Allocated", color="tab:green", alpha=0.6)
+    ax.set_xlabel("Week")
+    ax.set_ylabel("Units")
+    ax.legend(ncol=2, fontsize=8)
+    st.pyplot(fig)
+    plt.close(fig)
+    st.caption("PG-level accuracy is identical under every window, but UPC-level error (and the supplier volume for the event ingredient) changes a lot. This is the case for direct UPC forecasting or seasonal share profiles for eligible UPCs.")
+
+
+def _demo_backtest(cid):
+    st.markdown("**What can ~3 years of history actually validate?** Choose horizon and origins; the chart shows train/test windows.")
+    c1, c2, c3 = st.columns(3)
+    hist_m = c1.slider("History (months)", 24, 48, 36, key=f"demo_{cid}_bt_hist")
+    horizon = c2.slider("Test horizon (months)", 1, 60, 12, key=f"demo_{cid}_bt_h")
+    step = c3.slider("Origin step (months)", 1, 12, 3, key=f"demo_{cid}_bt_step")
+    min_train = 18
+    origins = [o for o in range(min_train, hist_m - horizon + 1, step)] if horizon <= hist_m - min_train else []
+
+    m1, m2 = st.columns(2)
+    m1.metric("Backtest origins available", len(origins))
+    m2.metric("Independent non-overlapping tests", max(0, (hist_m - min_train) // horizon) if horizon <= hist_m - min_train else 0)
+    if not origins:
+        st.error(f"No valid origin: a {horizon}-month horizon needs at least {min_train + horizon} months of history. A 60-month forecast cannot be backtested with {hist_m} months; use scenarios and sensitivity analysis.")
+    else:
+        fig, ax = plt.subplots(figsize=(8, 0.35 * len(origins) + 1.2))
+        for i, o in enumerate(origins):
+            ax.barh(i, o, color="tab:blue", alpha=0.6)
+            ax.barh(i, horizon, left=o, color="tab:orange", alpha=0.8)
+        ax.set_xlim(0, max(hist_m, origins[-1] + horizon))
+        ax.axvline(hist_m, linestyle=":", color="k")
+        ax.set_xlabel("Months  (blue = train, orange = test)")
+        ax.set_yticks([])
+        st.pyplot(fig)
+        plt.close(fig)
+
+        rng = np.random.default_rng(11)
+        hs = np.array([3, 6, 12, 18, 24])
+        hs = hs[hs <= hist_m - min_train]
+        naive = 0.06 + 0.004 * hs + rng.normal(0, 0.003, len(hs))
+        model = 0.05 + 0.003 * hs + rng.normal(0, 0.003, len(hs))
+        fig, ax = plt.subplots(figsize=(6, 2.8))
+        ax.plot(hs, naive, "o-", label="Seasonal naive")
+        ax.plot(hs, model, "o-", label="Regression (illustrative)")
+        ax.set_xlabel("Horizon (months)")
+        ax.set_ylabel("WAPE")
+        ax.legend()
+        st.pyplot(fig)
+        plt.close(fig)
+        st.caption("Illustrative numbers only: error typically grows with horizon, and fewer origins exist at longer horizons, so confidence in long-horizon accuracy shrinks fast.")
+
+
+def _demo_scenario_fan(cid):
+    st.markdown("**Low / base / high store plans to a fan chart and annual buying volumes.**")
+    c1, c2, c3 = st.columns(3)
+    low = c1.slider("Low: new stores", 0, 400, 50, step=25, key=f"demo_{cid}_fan_low")
+    base_s = c2.slider("Base: new stores", 0, 600, 200, step=25, key=f"demo_{cid}_fan_base")
+    high = c3.slider("High: new stores", 0, 800, 400, step=25, key=f"demo_{cid}_fan_high")
+    uncertainty = st.slider("Statistical uncertainty (sd as % of volume, grows with horizon)", 1, 20, 5, key=f"demo_{cid}_fan_unc")
+
+    wh, wf, stores0 = 156, 260, 1000
+    rng = np.random.default_rng(5)
+    _, _, hist = _lrf_weekly_history(rng, wh, stores0)
+    t = np.arange(wh + wf)
+    season = 1 + 0.25 * np.sin(2 * np.pi * t / 52)
+    base_level = hist.mean() / season[:wh].mean()
+    paths = {}
+    for name, n_new in [("Low", low), ("Base", base_s), ("High", high)]:
+        s = _lrf_store_path("Planned openings", wh, wf, stores0, n_new, 26)
+        paths[name] = (base_level * season * (s / stores0))[wh:]
+    h = np.arange(wf)
+    band = paths["Base"] * (uncertainty / 100) * np.sqrt((h + 1) / 52) * 1.64
+
+    fig, ax = plt.subplots(figsize=(8, 3.2))
+    ax.plot(np.arange(wh), hist, color="gray", label="History")
+    ax.fill_between(wh + h, paths["Base"] - band, paths["Base"] + band, alpha=0.2, label="Base 90% interval")
+    for name, color in [("Low", "tab:green"), ("Base", "tab:blue"), ("High", "tab:red")]:
+        ax.plot(wh + h, paths[name], color=color, label=name)
+    ax.set_xlabel("Week")
+    ax.set_ylabel("Weekly units")
+    ax.legend(ncol=3, fontsize=8)
+    st.pyplot(fig)
+    plt.close(fig)
+
+    rows = []
+    for i in range(5):
+        sl = slice(i * 52, (i + 1) * 52)
+        rows.append({"Year": f"Y{i + 1}", "Low": f"{paths['Low'][sl].sum():,.0f}", "Base": f"{paths['Base'][sl].sum():,.0f}", "High": f"{paths['High'][sl].sum():,.0f}",
+                     "Spread (High-Low)": f"{paths['High'][sl].sum() - paths['Low'][sl].sum():,.0f}"})
+    st.table(pd.DataFrame(rows))
+    st.caption("Share the near-term year as a firm commitment and later years as ranges; suppliers can plan flexible capacity bands around the spread.")
+
+
+LRF_DEMOS = {
+    "store_growth": ("Store estate: where does runaway growth come from?", _demo_store_growth),
+    "composition": ("UPC to ingredient buying volumes (WBE / composition)", _demo_composition),
+    "allocation": ("Top-down allocation vs. event UPCs", _demo_allocation),
+    "backtest": ("Backtest explorer: 3 years of history vs. a 5-year ask", _demo_backtest),
+    "scenario_fan": ("Scenario fan: low / base / high store plans", _demo_scenario_fan),
+}
+
+
+def _calc_long_range_forecasting(case):
+    _demo_composition(case["id"] + "_calc")
+
+
+def _render_demos(case):
+    cid = case["id"]
+    tabs = st.tabs([LRF_DEMOS[d][0] for d in case["interactive_demos"]])
+    for tab, d in zip(tabs, case["interactive_demos"]):
+        with tab:
+            LRF_DEMOS[d][1](cid)
+
+
+def _render_extra_sections(case):
+    for sec in case.get("extra_sections", []):
+        with st.expander(f":material/{sec.get('icon', 'article')}: {sec['title']}"):
+            if "markdown" in sec:
+                st.markdown(sec["markdown"])
+            if "bullets" in sec:
+                _bullets(sec["bullets"])
+            if "table" in sec:
+                _table(sec["table"])
+
+
 CALCULATORS = {
     "demand_forecasting": _calc_demand_forecasting,
     "markdown_pricing": _calc_markdown_pricing,
@@ -402,6 +672,7 @@ CALCULATORS = {
     "assortment_optimization": _calc_assortment_optimization,
     "returns_reverse_logistics": _calc_returns_reverse_logistics,
     "new_product_forecasting": _calc_new_product_forecasting,
+    "long_range_forecasting": _calc_long_range_forecasting,
 }
 
 
@@ -468,6 +739,12 @@ def _render_full_sections(case):
 
     with st.expander(":material/storefront: Business decision"):
         st.markdown(case["business_decision"])
+
+    _render_extra_sections(case)
+
+    if case.get("interactive_demos"):
+        with st.expander(":material/science: Examples & interactive demos", expanded=True):
+            _render_demos(case)
 
     with st.expander(":material/rocket_launch: Deployment & monitoring"):
         _bullets(case["deployment"])
