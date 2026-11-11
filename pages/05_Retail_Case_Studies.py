@@ -5,6 +5,7 @@ import streamlit as st
 from scipy.stats import norm
 
 from content.mlops_tooling import MLOPS_TOOLING_GUIDE, START_SMALL_NOTE, TOOLING_HINTS_BY_CASE
+from content.retail_stories import RETAIL_STORIES
 from content.retail_case_studies import CASE_STUDIES, CASE_STUDIES_BY_ID, SELF_CHECK_ITEMS, TIER_ORDER
 
 st.title("Retail & Fashion Data Science Case Studies")
@@ -15,7 +16,8 @@ st.info(
 Work through end-to-end retail/fashion Data Science case studies the way an interviewer would present
 them: business problem → objective → data → EDA → baseline → features → modeling → validation →
 business decision → deployment → business impact. Pick a case from the sidebar, then use **Interview
-Mode** to rehearse before revealing the full framework and solution.
+Mode** to rehearse before revealing the full framework and solution. For quick revision, open the
+**Story** at the top of each case: a plain narrative of the problem, challenges and data.
 """
 )
 
@@ -801,6 +803,18 @@ def _render_self_assessment(case):
         st.checkbox(item, key=f"cs_{case['id']}_check_{i}")
 
 
+def _render_story(case):
+    story = RETAIL_STORIES.get(case["id"])
+    if not story:
+        return
+    with st.expander(":material/auto_stories: Story: revise this case like a story"):
+        st.markdown(f"#### {story['headline']}")
+        st.markdown(story["story"])
+        st.markdown("**The data trail**")
+        _bullets(story["data_to_look_for"])
+        st.success(f"**Remember:** {story['takeaway']}")
+
+
 def render_case(case):
     interview_mode = st.session_state.get(f"interview_mode_{case['id']}", False)
 
@@ -835,6 +849,7 @@ def render_case(case):
 
     with st.expander(":material/summarize: Scenario", expanded=True):
         st.markdown(case["scenario"])
+    _render_story(case)
     _render_full_sections(case)
     _render_self_assessment(case)
 
